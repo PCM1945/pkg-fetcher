@@ -3,7 +3,7 @@
 ## Version 0.9.3 (January 6, 2026)
 
 ### Overview
-PKG Fetcher v0.9.3 is a stable release of the desktop application for fetching and downloading PlayStation update packages using serial numbers.
+PKG Fetcher v0.9.3 is a stable release of the desktop application for fetching and downloading update packages using serial numbers.
 
 ### Features
 
