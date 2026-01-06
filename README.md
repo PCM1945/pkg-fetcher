@@ -2,6 +2,7 @@
 
 A PyQt5-based desktop application for fetching and downloading update packages by serial number.
 
+
 ## Overview
 
 PKG Fetcher is a user-friendly GUI application that allows you to:
@@ -64,6 +65,17 @@ The application uses a `config.json` file to manage settings. The file is automa
 - **verify_ssl**: Whether to verify SSL certificates (set to `false`)
 - **chunk_size**: Download chunk size in bytes (default: 1MB = 1048576 bytes)
 - **output_directory**: Directory where downloaded packages are saved (relative to app directory)
+
+### ⚠️ Important: Server URL Configuration
+
+**You must provide the server URL to fetch packages.** The application does not include a default server URL for security and legal reasons. You need to:
+
+1. Obtain the valid XML server URL endpoint (usually in the format: `https://example.com/path/{s}-ver.xml` where `{s}` is the serial number placeholder)
+2. Open the **⚙ Settings** button
+3. Enter the server URL in the **XML URL Template** field
+4. Save the settings
+
+Without a valid server URL configured, the application will not be able to fetch any package information.
 
 ## Usage
 

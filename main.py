@@ -9,11 +9,14 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread
 
 from ui import DownloadThread, FetchThread, ConfigDialog
+from config import Config
+
+ver = "0.9.3"
 
 class PKGFetcher(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PKG Fetcher")
+        self.setWindowTitle(f"PKG Fetcher - {ver}")
         self.setMinimumSize(900, 520)
         self.packages = []
         self.downloaded_packages = []
@@ -22,6 +25,7 @@ class PKGFetcher(QWidget):
         self.dl_thread = None
         self.dl_worker = None
         self._build_ui()
+        self._check_server_configuration()
 
     def _build_ui(self):
         layout = QVBoxLayout()
@@ -80,6 +84,24 @@ class PKGFetcher(QWidget):
         self.setLayout(layout)
 
     # ===================== FETCH =====================
+
+    def _check_server_configuration(self):
+        """Check if server URL is configured and show warning if not."""
+        config = Config.load()
+        xml_url = Config.get_xml_url(config)
+        
+        if not xml_url or xml_url.strip() == "" or "{add server url}" in xml_url.lower():
+            QMessageBox.warning(
+                self,
+                "Server Not Configured",
+                "The server URL is not configured.\n\n"
+                "Please:\n"
+                "1. Click the ⚙ Settings button\n"
+                "2. Enter the server URL in the 'XML URL Template' field\n"
+                "3. Save the settings\n\n"
+                "The URL should be in format: https://example.com/path/{s}-ver.xml\n"
+                "(where {s} is the serial number placeholder)"
+            )
 
     def _cleanup_thread(self, thread, worker):
         """Properly clean up a thread and its worker."""

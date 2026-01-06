@@ -36,6 +36,18 @@ class FetchWorker(QObject):
             timeout = Config.get_timeout(config)
             verify_ssl = Config.get_verify_ssl(config)
             
+            # Check if XML URL is configured
+            if not xml_url or xml_url.strip() == "" or "{add server url}" in xml_url.lower():
+                raise RuntimeError(
+                    "Server URL is not configured.\n\n"
+                    "Please:\n"
+                    "1. Click the ⚙ Settings button\n"
+                    "2. Enter the server URL in the 'XML URL Template' field\n"
+                    "3. Save the settings\n\n"
+                    "The URL should be in format: https://example.com/path/{s}-ver.xml\n"
+                    "(where {s} is the serial number placeholder)"
+                )
+            
             all_packages = []
 
             for serial in self.serials:
