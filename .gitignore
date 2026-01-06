@@ -17,6 +17,6 @@ __pycache__/
 build/
 dist/
 .env
-
+pkgs
 # Config file
 config.json
