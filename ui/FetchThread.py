@@ -23,7 +23,11 @@ class FetchWorker(QObject):
 
     def __init__(self, serial):
         super().__init__()
-        self.serial = serial
+        # Accept both a single serial (string) or a list of serials
+        if isinstance(serial, list):
+            self.serials = serial
+        else:
+            self.serials = [serial]
 
     def run(self):
         try:
@@ -32,30 +36,46 @@ class FetchWorker(QObject):
             timeout = Config.get_timeout(config)
             verify_ssl = Config.get_verify_ssl(config)
             
-            url = xml_url.format(s=self.serial)
-            self.log.emit(f"Fetching XML: {url}")
+            all_packages = []
 
-            r = requests.get(url, timeout=timeout, verify=verify_ssl)
-            r.raise_for_status()
+            for serial in self.serials:
+                url = xml_url.format(s=serial)
+                self.log.emit(f"Fetching XML for {serial}: {url}")
 
-            root = ET.fromstring(r.text)
-            packages = []
+                try:
+                    r = requests.get(url, timeout=timeout, verify=verify_ssl)
+                    r.raise_for_status()
 
-            for tag in root.findall("tag"):
-                tag_name = tag.attrib.get("name")
-                for pkg in tag.findall("package"):
-                    packages.append({
-                        "title": pkg.findtext(".//TITLE"),
-                        "tag": tag_name,
-                        "version": pkg.attrib.get("version"),
-                        "size": int(pkg.attrib.get("size", 0)),
-                        "url": pkg.attrib.get("url")
-                    })
+                    root = ET.fromstring(r.text)
+                    packages = []
 
-            if not packages:
-                raise RuntimeError("No PKG found.")
+                    for tag in root.findall("tag"):
+                        tag_name = tag.attrib.get("name")
+                        for pkg in tag.findall("package"):
+                            packages.append({
+                                "title": pkg.findtext(".//TITLE"),
+                                "tag": tag_name,
+                                "version": pkg.attrib.get("version"),
+                                "size": int(pkg.attrib.get("size", 0)),
+                                "url": pkg.attrib.get("url"),
+                                "serial": serial
+                            })
 
-            self.finished.emit(packages)
+                    if packages:
+                        self.log.emit(f"  Found {len(packages)} package(s) for {serial}")
+                        all_packages.extend(packages)
+                    else:
+                        self.log.emit(f"  No packages found for {serial}")
+
+                except Exception as e:
+                    self.log.emit(f"  {serial} file not available")
+                    #self.log.emit(f"  Error fetching {serial}: {str(e)}")
+                    continue
+
+            if not all_packages:
+                raise RuntimeError("No PKG found for any serial.")
+
+            self.finished.emit(all_packages)
 
         except Exception as e:
             self.error.emit(str(e))

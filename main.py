@@ -40,6 +40,17 @@ class PKGFetcher(QWidget):
         top.addWidget(self.fetch_btn)
         top.addWidget(self.settings_btn)
 
+        # ID List input section
+        id_list_layout = QHBoxLayout()
+        self.id_list_input = QTextEdit()
+        self.id_list_input.setPlaceholderText("Enter IDs (one per line)\nE.g. NPUA80490\n      NPUA80491\n      NPUA80492")
+        self.id_list_input.setMaximumHeight(80)
+        self.fetch_list_btn = QPushButton("Fetch All IDs")
+        self.fetch_list_btn.clicked.connect(self.fetch_packages_from_list)
+        id_list_layout.addWidget(QLabel("ID List:"))
+        id_list_layout.addWidget(self.id_list_input, 1)
+        id_list_layout.addWidget(self.fetch_list_btn)
+
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(
             ["Select", "Title", "Tag", "Version", "Size (MB)"]
@@ -61,6 +72,7 @@ class PKGFetcher(QWidget):
         self.log.setReadOnly(True)
 
         layout.addLayout(top)
+        layout.addLayout(id_list_layout)
         layout.addWidget(self.table)
         layout.addLayout(bottom)
         layout.addWidget(QLabel("Log:"))
@@ -127,8 +139,47 @@ class PKGFetcher(QWidget):
 
         self.thread.start()
 
+    def fetch_packages_from_list(self):
+        """Fetch packages for multiple IDs from the list."""
+        id_list_text = self.id_list_input.toPlainText().strip()
+        if not id_list_text:
+            QMessageBox.warning(self, "Warning", "Please enter at least one ID.")
+            return
+
+        # Parse IDs from the text area (one per line, trimmed and uppercased)
+        ids = [line.strip().upper() for line in id_list_text.split('\n') if line.strip()]
+        
+        if not ids:
+            QMessageBox.warning(self, "Warning", "Please enter valid IDs.")
+            return
+
+        # Clean up any previous fetch thread and worker
+        self._cleanup_thread(self.thread, self.worker)
+
+        self.fetch_list_btn.setEnabled(False)
+        self.fetch_btn.setEnabled(False)
+        self.log.clear()
+        self.packages = []  # Clear previous packages
+        self.populate_table()
+
+        self.thread = QThread()
+        self.worker = FetchThread.FetchWorker(ids)
+        self.worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.on_fetch_finished)
+        self.worker.log.connect(self.log.append)
+        self.worker.error.connect(self.on_error)
+
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        self.thread.start()
+
     def on_fetch_finished(self, packages):
         self.fetch_btn.setEnabled(True)
+        self.fetch_list_btn.setEnabled(True)
         self.packages.extend(packages)
         self.populate_table()
         self.log.append(f"{len(packages)} package(s) found.")
@@ -218,6 +269,7 @@ class PKGFetcher(QWidget):
 
     def on_error(self, msg):
         self.fetch_btn.setEnabled(True)
+        self.fetch_list_btn.setEnabled(True)
         self.download_btn.setEnabled(True)
         QMessageBox.critical(self, "Error", msg)
 
